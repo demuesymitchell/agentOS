@@ -1,0 +1,144 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@400;700&family=MedievalSharp&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; image-rendering: pixelated; }
+
+body {
+  background: #0a0808;
+  color: #c8b89a;
+  font-family: 'Cinzel', serif;
+  font-size: 14px;
+  overflow: hidden;
+  margin: 0; padding: 0;
+}
+
+canvas { display: block; image-rendering: pixelated; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #1a140e; }
+::-webkit-scrollbar-thumb { background: #4a3820; }
+
+/* ── Typography ── */
+.pixel-text   { font-family: 'Press Start 2P', monospace; }
+.cinzel       { font-family: 'Cinzel', serif; }
+.cinzel-deco  { font-family: 'Cinzel Decorative', serif; }
+
+/* ── Panel base ── */
+.panel-dungeon {
+  background: rgba(12, 8, 6, 0.95);
+  border: 1px solid #4a3820;
+  border-top: 2px solid #6a5030;
+  backdrop-filter: blur(2px);
+  position: relative;
+}
+.panel-dungeon::before {
+  content:'';
+  position:absolute;
+  inset:2px;
+  border:1px solid #2a1e12;
+  pointer-events:none;
+  z-index:0;
+}
+
+.panel-header {
+  background: linear-gradient(180deg, #1e1208 0%, #140e06 100%);
+  border-bottom: 1px solid #4a3820;
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+/* ── Colors ── */
+.gold      { color: #e8c84a; }
+.gold-glow { color: #e8c84a; text-shadow: 0 0 10px #e8c84a66; }
+.parchment { color: #c8b89a; }
+.dim       { color: #6a5840; }
+.blood     { color: #c83030; }
+.fire      { color: #e87830; }
+.mana      { color: #6090c8; }
+.nature    { color: #50a060; }
+
+/* ── Buttons ── */
+.btn-dungeon {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  background: #140e06;
+  border: 1px solid #4a3820;
+  color: #c8b89a;
+  cursor: pointer;
+  transition: all 0.1s;
+  letter-spacing: 0.5px;
+}
+.btn-dungeon:hover { border-color: #e8c84a; color: #e8c84a; background: #1e1208; }
+.btn-dungeon.primary { border-color: #e8c84a88; color: #e8c84a; }
+.btn-dungeon.danger  { border-color: #6a202044; color: #c86060; }
+.btn-dungeon.danger:hover { border-color: #c83030; color: #ff6060; background: #1a0808; }
+.btn-dungeon:disabled { border-color: #2a1e12; color: #3a2818; cursor: default; }
+
+/* ── Inputs ── */
+.input-dungeon {
+  background: #0c0806;
+  border: 1px solid #3a2818;
+  color: #c8b89a;
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  padding: 5px 8px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s;
+}
+.input-dungeon:focus { border-color: #e8c84a88; }
+.input-dungeon::placeholder { color: #3a2818; }
+
+/* ── Taskbar ── */
+.taskbar {
+  background: linear-gradient(180deg, #1e1208 0%, #120e06 100%);
+  border-bottom: 2px solid #4a3820;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.8);
+}
+
+/* ── Scroll ── */
+.scroll-dungeon { scrollbar-width: thin; scrollbar-color: #4a3820 #0a0808; overflow-y: auto; }
+
+/* ── Animations ── */
+.log-entry { animation: fadeIn .2s ease; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(-2px); } to { opacity:1; } }
+
+@keyframes flicker { 0%,100%{opacity:1} 50%{opacity:.65} }
+.flicker { animation: flicker 1.8s ease-in-out infinite; }
+
+/* ── Room grid picker ── */
+.room-grid-cell {
+  width: 64px;
+  height: 52px;
+  border: 1px solid #3a2818;
+  background: #0c0806;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s;
+  position: relative;
+}
+.room-grid-cell.occupied {
+  border-color: #6a5830;
+  background: #1a1206;
+}
+.room-grid-cell.selectable:hover {
+  border-color: #e8c84a;
+  background: #1e1408;
+}
+.room-grid-cell.selected {
+  border-color: #e8c84a;
+  background: #241a08;
+  box-shadow: inset 0 0 8px #e8c84a22;
+}
