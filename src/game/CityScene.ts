@@ -518,7 +518,7 @@ export class CityScene extends Phaser.Scene {
   public updateRooms(rooms:Room[]){
     this.rooms=this.positionRooms(rooms);
     this.children.list.filter(c=>
-      c!==this.glowGfx&&(c.depth<=4)&&!(c instanceof Phaser.GameObjects.Graphics)
+      c!==this.glowGfx&&((c as any).depth<=4)&&!(c instanceof Phaser.GameObjects.Graphics)
     ).forEach(c=>c.destroy());
     this.buildScene();
     this.syncAgentSprites();
