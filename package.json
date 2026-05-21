@@ -2,13 +2,16 @@
   "name": "agent-os",
   "version": "0.3.0",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start"
   },
   "dependencies": {
-    "next": "14.2.5",
+    "next": "^14.2.35",
     "react": "^18",
     "react-dom": "^18",
     "phaser": "^3.80.1",
