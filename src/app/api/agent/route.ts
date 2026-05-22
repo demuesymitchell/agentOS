@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     const maxTokens = roomConfig?.maxTokens || 2000;
 
     const msg = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-opus-4-5',
       max_tokens: maxTokens,
       system: systemPrompt,
       messages: [{ role: 'user', content: messageContent }],

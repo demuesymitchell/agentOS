@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const client = new Anthropic({ apiKey: key });
 
     const msg = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-opus-4-5',
       max_tokens: 1024,
       system: `You are SUPREME LEADER — the director of AgentOS, an autonomous AI command center.
 Decompose the user's goal into concrete tasks and route each to the right department.
