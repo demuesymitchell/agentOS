@@ -74,9 +74,19 @@ export default function Taskbar() {
         </div>
       )}
 
-      {/* Tip */}
+      {/* Reset all panels */}
       <div className="flex items-center px-3 border-r border-[#4a3820]">
-        <span className="cinzel dim" style={{fontSize:9}}>Drag panel headers · Resize corners</span>
+        <button
+          onClick={() => {
+            // Clear all panel position localStorage keys and reload
+            Object.keys(localStorage)
+              .filter(k => k.startsWith('agentOS_panel_'))
+              .forEach(k => localStorage.removeItem(k));
+            window.location.reload();
+          }}
+          className="btn-dungeon text-[9px] px-2 py-1"
+          title="Reset all panels to default positions"
+        >⊞ Reset Panels</button>
       </div>
 
       <div className="ml-auto flex items-center px-4 border-l border-[#4a3820]">
