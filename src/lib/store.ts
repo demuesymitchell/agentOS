@@ -262,7 +262,36 @@ export const useStore = create<Store>((set, get) => ({
   // ── Hydrate ───────────────────────────────────────────────────────────────────
   async hydrate() {
     const { rooms, agents } = await seedIfEmpty();
-    set({ rooms, agents });
+
+    // Also load tasks and logs from DB
+    let tasks: any[] = [];
+    let logs: any[] = [];
+    try {
+      const [tr, lr] = await Promise.all([
+        fetch('/api/db/tasks').then(r=>r.json()).catch(()=>[]),
+        fetch('/api/db/logs').then(r=>r.json()).catch(()=>[]),
+      ]);
+      tasks = Array.isArray(tr) ? tr : [];
+      logs  = Array.isArray(lr) ? lr : [];
+    } catch {}
+
+    // Fall back to localStorage for tasks/logs if DB empty
+    if (tasks.length === 0) {
+      try { tasks = JSON.parse(localStorage.getItem('agentOS_tasks')||'[]'); } catch {}
+    }
+    if (logs.length === 0) {
+      try { logs = JSON.parse(localStorage.getItem('agentOS_logs')||'[]'); } catch {}
+    }
+
+    // Default welcome log if nothing exists
+    if (logs.length === 0) {
+      logs = [
+        { id:'0', ts:Date.now(), level:'system', from:'OS',             message:'AgentOS initialized' },
+        { id:'1', ts:Date.now(), level:'system', from:'SUPREME LEADER', message:'Standing by for directives.' },
+      ];
+    }
+
+    set({ rooms, agents, tasks, logs });
     get().checkApiKey();
   },
 
