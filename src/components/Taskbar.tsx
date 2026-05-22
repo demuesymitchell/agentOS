@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useStore } from '@/lib/store';
+import DbStatus from './DbStatus';
 import type { PanelId } from '@/types';
 
 const PANEL_DEFS: { id: PanelId; label: string; icon: string }[] = [
@@ -88,6 +88,9 @@ export default function Taskbar() {
           title="Reset all panels to default positions"
         >⊞ Reset Panels</button>
       </div>
+
+      {/* DB Status */}
+      <DbStatus />
 
       <div className="ml-auto flex items-center px-4 border-l border-[#4a3820]">
         <span className="cinzel dim" style={{fontSize:11}}>{clock}</span>
