@@ -3,6 +3,9 @@ import { useState } from 'react';
 import Panel from './panels/Panel';
 import { useStore } from '@/lib/store';
 import type { Task, TaskOutput } from '@/types';
+import dynamic from 'next/dynamic';
+
+const XlsxDownload = dynamic(() => import('./XlsxDownload'), { ssr: false });
 
 const SS: Record<string,{c:string;i:string;label:string}> = {
   queued: {c:'#4a3820',i:'○',label:'QUEUED'},
@@ -11,8 +14,58 @@ const SS: Record<string,{c:string;i:string;label:string}> = {
   error:  {c:'#c83030',i:'✕',label:'ERROR'},
 };
 
-function OutputBlock({o}:{o:TaskOutput}) {
+function OutputBlock({o, agentApiKey}:{o:TaskOutput, agentApiKey?:string|null}) {
   const [expanded, setExpanded] = useState(false);
+
+  // File output — xlsx generator (explicit file type)
+  if (o.type === 'file') {
+    try {
+      const parsed = JSON.parse(o.content);
+      if (parsed.type === 'xlsx_spec') {
+        return (
+          <div className="mt-2" style={{background:'#080604',border:'1px solid #3a2818',borderRadius:4}}>
+            <div className="px-2 py-1.5 border-b border-[#2a1e12]" style={{background:'#0c0806'}}>
+              <span className="cinzel gold" style={{fontSize:10}}>{o.label||'File Output'}</span>
+            </div>
+            <div className="p-2">
+              <XlsxDownload spec={parsed.spec} apiKey={agentApiKey}/>
+            </div>
+          </div>
+        );
+      }
+    } catch {}
+  }
+
+  // Also detect xlsx spec stored as text (from older tasks or label match)
+  const isXlsxSpec = o.label?.includes('Generate .xlsx') || o.label?.includes('⬇️');
+  if (isXlsxSpec) {
+    try {
+      const parsed = JSON.parse(o.content);
+      if (parsed.type === 'xlsx_spec') {
+        return (
+          <div className="mt-2" style={{background:'#080604',border:'1px solid #3a2818',borderRadius:4}}>
+            <div className="px-2 py-1.5 border-b border-[#2a1e12]" style={{background:'#0c0806'}}>
+              <span className="cinzel gold" style={{fontSize:10}}>{o.label}</span>
+            </div>
+            <div className="p-2">
+              <XlsxDownload spec={parsed.spec} apiKey={agentApiKey}/>
+            </div>
+          </div>
+        );
+      }
+    } catch {}
+    // Fallback — treat content directly as spec
+    return (
+      <div className="mt-2" style={{background:'#080604',border:'1px solid #3a2818',borderRadius:4}}>
+        <div className="px-2 py-1.5 border-b border-[#2a1e12]" style={{background:'#0c0806'}}>
+          <span className="cinzel gold" style={{fontSize:10}}>{o.label}</span>
+        </div>
+        <div className="p-2">
+          <XlsxDownload spec={o.content} apiKey={agentApiKey}/>
+        </div>
+      </div>
+    );
+  }
   if (o.type==='image') return (
     <div className="mt-2 rounded overflow-hidden" style={{border:'1px solid #4a3820'}}>
       {o.label && <p className="cinzel gold px-2 py-1" style={{fontSize:10,background:'#120e06'}}>{o.label}</p>}
@@ -51,7 +104,7 @@ function OutputBlock({o}:{o:TaskOutput}) {
 
 function TaskCard({task}:{task:Task}) {
   const [exp, setExp] = useState(false);
-  const {rooms, cancelTask, retryTask, setSelectedTask} = useStore();
+  const {rooms, cancelTask, retryTask, setSelectedTask, agents} = useStore();
   const room = rooms.find(r=>r.id===task.roomId);
   const s = SS[task.status]||SS.queued;
   const elapsed = task.completedAt&&task.startedAt
@@ -106,13 +159,26 @@ function TaskCard({task}:{task:Task}) {
             )}
           </div>
 
-          {/* Outputs */}
-          {task.outputs.length > 0 ? (
+          {/* Xlsx download — show if any output looks like a spreadsheet spec */}
+          {task.status==='done' && task.outputs.some(o=>
+            o.label?.includes('Spreadsheet') || o.label?.includes('xlsx') || o.label?.includes('⬇️')
+          ) && (
+            <div className="mt-2 p-2" style={{background:'#080604',border:'1px solid #e8c84a44',borderRadius:4}}>
+              <p className="cinzel gold mb-2" style={{fontSize:10}}>📊 Generate Downloadable File</p>
+              <XlsxDownload
+                spec={task.outputs.find(o=>o.label?.includes('Specification'))?.content || task.outputs[0]?.content || ''}
+                apiKey={agents.find(a=>a.id===task.agentId)?.apiKeyOverride}
+              />
+            </div>
+          )}
             <div>
               <p className="cinzel dim mb-1" style={{fontSize:9}}>
                 {task.outputs.length} output{task.outputs.length>1?'s':''}
               </p>
-              {task.outputs.map((o,i)=><OutputBlock key={i} o={o}/>)}
+              {task.outputs.map((o,i)=>{
+                const agent = agents.find(a=>a.id===task.agentId);
+                return <OutputBlock key={i} o={o} agentApiKey={agent?.apiKeyOverride}/>;
+              })}
             </div>
           ) : task.status==='error' ? (
             <div className="p-2 mt-1" style={{background:'#1a0808',border:'1px solid #6a202044'}}>
