@@ -11,7 +11,6 @@ const ROOM_H  = 18; // tiles tall per room
 const PAD     = 2;  // outer padding tiles
 const MAP_COLS = PAD*2 + ROOM_W*2;
 const MAP_ROWS = PAD*2 + ROOM_H*2;
-
 // Room slot positions (tile coords, top-left of each room)
 function slotPos(col: number, row: number) {
   return { x: PAD + col*ROOM_W, y: PAD + row*ROOM_H };
@@ -82,6 +81,10 @@ interface AgentSprite {
 }
 
 export class CityScene extends Phaser.Scene {
+  // Exposed so GameCanvas can read them for resize re-centering
+  public readonly MAP_COLS = MAP_COLS;
+  public readonly MAP_ROWS = MAP_ROWS;
+
   private rooms:  Room[]  = [];
   private agents: Agent[] = [];
   private agentSprites: Map<string, AgentSprite> = new Map();
@@ -139,8 +142,10 @@ export class CityScene extends Phaser.Scene {
     this.agents = this.registry.get('agents') || [];
 
     const W = MAP_COLS * T, H = MAP_ROWS * T;
+
+    // Set generous bounds so you can pan freely in all directions
     this.cameras.main.setBackgroundColor('#050505');
-    this.cameras.main.setBounds(0, 0, W, H);
+    this.cameras.main.setBounds(-W, -H, W*3, H*3);
     this.cameras.main.setZoom(2.5);
 
     this.glowGfx = this.add.graphics().setDepth(5);
@@ -149,10 +154,13 @@ export class CityScene extends Phaser.Scene {
     this.syncAgentSprites();
     this.setupDrag();
 
-    // Center camera after brief delay
-    this.time.delayedCall(80, () => {
-      this.cameras.main.centerOn(W / 2, H / 2);
-    });
+    // Center on the dungeon — delayed to ensure canvas is sized
+    this.time.delayedCall(100, () => this.centerOnDungeon());
+  }
+
+  private centerOnDungeon() {
+    const W = MAP_COLS * T, H = MAP_ROWS * T;
+    this.cameras.main.centerOn(W / 2, H / 2);
   }
 
   // ─── Room positioning ──────────────────────────────────────────────────────
@@ -491,23 +499,50 @@ export class CityScene extends Phaser.Scene {
 
   private setupDrag() {
     const cam = this.cameras.main;
+
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      this.isDragging = true; this.wasDragged = false;
-      this.dragSX = p.x; this.dragSY = p.y;
-      this.camSX  = cam.scrollX; this.camSY  = cam.scrollY;
+      this.isDragging = true;
+      this.wasDragged = false;
+      this.dragSX = p.x;
+      this.dragSY = p.y;
+      // Capture current scroll at the exact moment drag starts
+      this.camSX = cam.scrollX;
+      this.camSY = cam.scrollY;
     });
+
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
       if (!this.isDragging) return;
-      const dx = p.x-this.dragSX, dy = p.y-this.dragSY;
-      if (Math.abs(dx)>3 || Math.abs(dy)>3) {
+      const dx = p.x - this.dragSX;
+      const dy = p.y - this.dragSY;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
         this.wasDragged = true;
-        cam.setScroll(this.camSX - dx/cam.zoom, this.camSY - dy/cam.zoom);
+        // Divide by zoom so drag speed matches visual speed
+        cam.setScroll(
+          this.camSX - dx / cam.zoom,
+          this.camSY - dy / cam.zoom,
+        );
         this.game.canvas.style.cursor = 'grabbing';
       }
     });
-    this.input.on('pointerup', () => { this.isDragging = false; this.game.canvas.style.cursor = 'default'; });
-    this.input.on('wheel', (_p:any,_g:any,_dx:number,dy:number) => {
-      cam.zoom = Phaser.Math.Clamp(cam.zoom - dy*0.002, 0.5, 5);
+
+    this.input.on('pointerup', () => {
+      this.isDragging = false;
+      this.game.canvas.style.cursor = 'default';
+    });
+
+    this.input.on('pointerupoutside', () => {
+      this.isDragging = false;
+      this.game.canvas.style.cursor = 'default';
+    });
+
+    // Scroll wheel zoom — zoom toward cursor position
+    this.input.on('wheel', (
+      p: Phaser.Input.Pointer,
+      _go: any, _dx: number, dy: number
+    ) => {
+      const oldZoom = cam.zoom;
+      const newZoom = Phaser.Math.Clamp(oldZoom - dy * 0.001, 0.4, 5);
+      cam.setZoom(newZoom);
     });
   }
 
@@ -517,10 +552,7 @@ export class CityScene extends Phaser.Scene {
     this.rooms = this.positionRooms(rooms);
     this.buildWorld();
     this.syncAgentSprites();
-    this.time.delayedCall(50, () => {
-      const W = MAP_COLS*T, H = MAP_ROWS*T;
-      this.cameras.main.centerOn(W/2, H/2);
-    });
+    this.time.delayedCall(50, () => this.centerOnDungeon());
   }
 
   public updateAgents(agents: Agent[]) {

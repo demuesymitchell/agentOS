@@ -19,8 +19,8 @@ export default function GameCanvas() {
       const state = useStore.getState();
       const sceneInstance = new CityScene();
 
-      const W = containerRef.current!.clientWidth  || window.innerWidth;
-      const H = containerRef.current!.clientHeight || (window.innerHeight - 44);
+      const cw = containerRef.current!.clientWidth  || window.innerWidth;
+      const ch = containerRef.current!.clientHeight || window.innerHeight - 44;
 
       game = new Phaser.Game({
         type: Phaser.AUTO,
@@ -31,10 +31,10 @@ export default function GameCanvas() {
         roundPixels: true,
         scene: [sceneInstance],
         scale: {
-          mode: Phaser.Scale.RESIZE,
-          autoCenter: Phaser.Scale.CENTER_BOTH,
-          width: W,
-          height: H,
+          // NONE = fixed canvas, no auto-resize that resets camera
+          mode: Phaser.Scale.NONE,
+          width:  cw,
+          height: ch,
         },
         callbacks: {
           preBoot: (g: any) => {
@@ -50,7 +50,21 @@ export default function GameCanvas() {
 
       gameRef.current = game;
 
-      // Poll until scene is active
+      // Handle window resize — manually resize canvas and re-center
+      const onResize = () => {
+        const cw2 = containerRef.current?.clientWidth  || window.innerWidth;
+        const ch2 = containerRef.current?.clientHeight || window.innerHeight - 44;
+        game.scale.resize(cw2, ch2);
+        const scene = sceneRef.current;
+        if (scene?.cameras?.main) {
+          const W = scene.MAP_COLS * 16;
+          const H = scene.MAP_ROWS * 16;
+          scene.cameras.main.centerOn(W/2, H/2);
+        }
+      };
+      window.addEventListener('resize', onResize);
+
+      // Poll until scene active
       const poll = setInterval(() => {
         const s = game?.scene?.getScene('CityScene') as any;
         if (s?.sys?.isActive()) {
@@ -58,6 +72,8 @@ export default function GameCanvas() {
           clearInterval(poll);
         }
       }, 100);
+
+      return () => window.removeEventListener('resize', onResize);
     };
 
     init();
@@ -66,29 +82,30 @@ export default function GameCanvas() {
     };
   }, []);
 
-  // Sync rooms → scene
   useEffect(() => {
     if (!gameRef.current) return;
     gameRef.current.registry.set('rooms', rooms);
     sceneRef.current?.updateRooms?.(rooms);
   }, [rooms]);
 
-  // Sync agents → scene (fires immediately when agent added)
   useEffect(() => {
     if (!gameRef.current) return;
     gameRef.current.registry.set('agents', agents);
-    sceneRef.current?.updateAgents?.(agents);
-    // Also call syncAgentSprites directly in case scene already running
-    if (sceneRef.current?.syncAgentSprites) {
+    if (sceneRef.current) {
       sceneRef.current.agents = agents;
-      sceneRef.current.syncAgentSprites();
+      sceneRef.current.syncAgentSprites?.();
     }
   }, [agents]);
 
   return (
     <div
       ref={containerRef}
-      style={{ position:'absolute', inset:0, background:'#050505' }}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        background: '#050505',
+        overflow: 'hidden',
+      }}
     />
   );
 }
