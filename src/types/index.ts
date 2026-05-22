@@ -1,25 +1,34 @@
-// ─── Core Types ────────────────────────────────────────────────────────────────
-
 export type AgentStatus = 'idle' | 'working' | 'waiting' | 'error' | 'offline';
 export type TaskStatus  = 'queued' | 'running' | 'done' | 'error';
 export type LogLevel    = 'info' | 'success' | 'warn' | 'error' | 'delegate' | 'system';
 export type PanelId     = 'terminal' | 'tasks' | 'media' | 'agentInspect' | 'admin';
 
-// ─── Room ──────────────────────────────────────────────────────────────────────
-
 export interface Room {
   id: string;
   name: string;
-  color: string;       // hex e.g. '#00e5ff'
-  icon: string;        // emoji or short label
-  gridX: number;       // tile position on map
+  color: string;
+  icon: string;
+  gridX: number;
   gridY: number;
   gridW: number;
   gridH: number;
   createdAt: number;
+  // Room config
+  systemPromptOverride?: string;
+  maxTokens?: number;
+  outputFormat?: 'text' | 'image' | 'listing' | 'json';
+  // Attached media files
+  attachments?: RoomAttachment[];
 }
 
-// ─── Agent ─────────────────────────────────────────────────────────────────────
+export interface RoomAttachment {
+  id: string;
+  name: string;
+  type: 'image' | 'video' | 'pdf' | 'text' | 'other';
+  url: string;        // object URL or remote URL
+  size: number;
+  addedAt: number;
+}
 
 export interface AgentTool {
   id: string;
@@ -32,27 +41,25 @@ export interface Agent {
   id: string;
   name: string;
   roomId: string;
-  role: string;              // e.g. "Designer", "Copywriter"
-  purpose: string;           // system prompt / purpose description
+  role: string;
+  purpose: string;
   color: string;
   status: AgentStatus;
   currentTask: string | null;
   tools: AgentTool[];
-  apiKeyOverride: string | null;  // if null, uses global ANTHROPIC_API_KEY
-  charModel: string;              // sprite key e.g. 'big_demon', 'knight_m'
+  apiKeyOverride: string | null;
+  charModel: string;
   tasksCompleted: number;
   tasksErrored: number;
   createdAt: number;
-  x?: number;
-  y?: number;
 }
 
-// ─── Task ──────────────────────────────────────────────────────────────────────
-
 export interface TaskOutput {
-  type: 'text' | 'image' | 'listing' | 'json';
-  content: string;       // text, image URL, JSON string
+  id?: string;
+  type: 'text' | 'image' | 'listing' | 'json' | 'file';
+  content: string;
   label?: string;
+  mimeType?: string;
 }
 
 export interface Task {
@@ -68,10 +75,8 @@ export interface Task {
   createdAt: number;
   startedAt: number | null;
   completedAt: number | null;
-  parentGoal: string | null;   // the original user directive
+  parentGoal: string | null;
 }
-
-// ─── Log ───────────────────────────────────────────────────────────────────────
 
 export interface LogEntry {
   id: string;
@@ -82,16 +87,9 @@ export interface LogEntry {
   message: string;
 }
 
-// ─── Panel state ───────────────────────────────────────────────────────────────
-
 export interface PanelState {
   id: PanelId;
   label: string;
   open: boolean;
   minimized: boolean;
 }
-
-// ─── DB schema (Postgres-ready, localStorage-backed now) ───────────────────────
-// Tables: rooms, agents, tasks, logs
-// All IDs are UUIDs, timestamps are Unix ms integers
-// When migrating to Postgres: run /lib/db/migrate.sql
