@@ -1,21 +1,25 @@
-/**
- * PostgreSQL client for Railway
- * Uses pg pool with SSL enabled (required by Railway)
- */
-
 let pool: any = null;
 
 async function getPool() {
   if (pool) return pool;
   const { Pool } = await import('pg');
+
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) throw new Error('DATABASE_URL not set');
+
+  // Always enable SSL for Railway — works for both internal and proxy URLs
   pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('railway')
-      ? { rejectUnauthorized: false }
-      : false,
+    connectionString,
+    ssl: { rejectUnauthorized: false },
     max: 10,
     idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
   });
+
+  // Test connection immediately
+  const client = await pool.connect();
+  client.release();
+
   return pool;
 }
 
