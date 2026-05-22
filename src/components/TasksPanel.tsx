@@ -171,6 +171,9 @@ function TaskCard({task}:{task:Task}) {
               />
             </div>
           )}
+
+          {/* Outputs */}
+          {task.outputs.length > 0 ? (
             <div>
               <p className="cinzel dim mb-1" style={{fontSize:9}}>
                 {task.outputs.length} output{task.outputs.length>1?'s':''}
