@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import DbStatus from './DbStatus';
+import { useStore } from '@/lib/store';
 import type { PanelId } from '@/types';
 
 const PANEL_DEFS: { id: PanelId; label: string; icon: string }[] = [
