@@ -11,8 +11,7 @@ export default function AgentInspectPanel() {
   const agent = agents.find(a => a.id === selectedAgentId);
 
   return (
-    <Panel id="agentInspect" title={agent ? agent.name : 'AGENT INSPECT'} icon="🧙"
-      defaultX={820} defaultY={54} defaultW={320} defaultH={500} minW={260} minH={200}>
+    <Panel id="agentInspect" title={agent ? agent.name : 'AGENT INSPECT'} icon="🧙" minW={260} minH={200}>
       {!agent ? (
         <div className="flex items-center justify-center p-8">
           <p className="cinzel dim text-center leading-relaxed" style={{fontSize:12}}>

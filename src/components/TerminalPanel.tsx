@@ -24,8 +24,7 @@ export default function TerminalPanel() {
   };
 
   return (
-    <Panel id="terminal" title="COMMAND HALL" icon="⚔"
-      defaultX={10} defaultY={54} defaultW={400} defaultH={380} minW={300} minH={200}>
+    <Panel id="terminal" title="COMMAND HALL" icon="⚔" minW={300} minH={200}>
       {/* Log */}
       <div ref={logRef} className="scroll-dungeon flex-1 p-2 space-y-0.5 min-h-0"
         style={{ background:'#080604', overflowY:'auto' }}>

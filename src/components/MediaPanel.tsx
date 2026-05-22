@@ -8,8 +8,7 @@ export default function MediaPanel() {
   const mediaTasks = tasks.filter(t => t.roomId===mediaRoom?.id && t.outputs.length>0 && t.status==='done');
 
   return (
-    <Panel id="media" title="ARTIFACT VAULT" icon="🎨"
-      defaultX={420} defaultY={54} defaultW={380} defaultH={300} minW={280} minH={180}>
+    <Panel id="media" title="ARTIFACT VAULT" icon="🎨" minW={280} minH={180}>
       <div className="scroll-dungeon flex-1 p-3 space-y-3 min-h-0" style={{overflowY:'auto'}}>
         {mediaTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 gap-2">

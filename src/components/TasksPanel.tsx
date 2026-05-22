@@ -88,8 +88,7 @@ export default function TasksPanel() {
   const filtered = tasks.filter(t => filter==='all' || t.status===filter);
 
   return (
-    <Panel id="tasks" title="QUEST LOG" icon="📜"
-      defaultX={10} defaultY={444} defaultW={400} defaultH={380} minW={300} minH={200}
+    <Panel id="tasks" title="QUEST LOG" icon="📜" minW={300} minH={200}
       headerExtra={
         <span className="cinzel dim ml-2" style={{fontSize:11}}>
           {tasks.filter(t=>t.status==='running').length > 0 &&
