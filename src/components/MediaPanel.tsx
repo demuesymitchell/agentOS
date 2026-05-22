@@ -235,7 +235,7 @@ export default function MediaPanel() {
               <div>
                 <label className="cinzel dim block mb-1" style={{fontSize:11}}>OUTPUT FORMAT</label>
                 <select value={configForm.outputFormat}
-                  onChange={e=>setConfigForm(f=>({...f,outputFormat:e.target.value}))}
+                  onChange={e=>setConfigForm(f=>({...f,outputFormat:e.target.value as 'text'|'image'|'listing'|'json'}))}
                   className="input-dungeon" style={{fontSize:12}}>
                   <option value="text">Text</option>
                   <option value="image">Image (+ DALL-E)</option>
