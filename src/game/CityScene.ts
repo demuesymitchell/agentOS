@@ -179,7 +179,7 @@ export class CityScene extends Phaser.Scene {
   private buildWorld() {
     // Destroy everything except glow + agents
     this.children.list
-      .filter(c => c !== this.glowGfx && c.depth <= 8)
+      .filter(c => c !== this.glowGfx && (c as any).depth <= 8)
       .forEach(c => c.destroy());
 
     // Void background
