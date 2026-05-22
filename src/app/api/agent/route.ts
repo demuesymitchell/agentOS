@@ -3,14 +3,13 @@ import type { TaskOutput } from '@/types';
 
 export async function POST(req: NextRequest) {
   const { task, agent, apiKey, roomConfig, attachments } = await req.json();
-
   const key = apiKey || process.env.ANTHROPIC_API_KEY;
 
   if (!key) {
     return NextResponse.json({
       outputs: [{
         type: 'text',
-        content: `⚠️ No API key configured.\n\nTo enable real AI responses:\n1. Open Guild Hall\n2. Click EDIT on ${agent.name}\n3. Add your Anthropic API key\n\nOr set ANTHROPIC_API_KEY in Railway environment variables.`,
+        content: `⚠️ No API key configured.\n\nTo enable AI responses:\n1. Open Guild Hall → Edit ${agent.name}\n2. Add your Anthropic API key\n\nOr set ANTHROPIC_API_KEY in Railway environment variables.`,
         label: 'API Key Required',
       }],
       rawResponse: null,
@@ -22,44 +21,56 @@ export async function POST(req: NextRequest) {
     const Anthropic = (await import('@anthropic-ai/sdk')).default;
     const client = new Anthropic({ apiKey: key });
 
+    // Detect if this is a spreadsheet/document task
+    const taskLower = task.toLowerCase();
+    const isSpreadsheet = taskLower.includes('spreadsheet') || taskLower.includes('excel') ||
+      taskLower.includes('xlsx') || taskLower.includes('workbook') || taskLower.includes('sheet');
+    const isDocument = taskLower.includes('document') || taskLower.includes('docx') ||
+      taskLower.includes('word') || taskLower.includes('pdf');
+
     // Build system prompt
     let systemPrompt = agent.purpose
       ? `${agent.purpose}\n\nYour name is ${agent.name}. Your role is ${agent.role}.`
       : `You are ${agent.name}, a ${agent.role} in an autonomous AI operating system.`;
 
-    // Apply room config override
     if (roomConfig?.systemPromptOverride) {
       systemPrompt = roomConfig.systemPromptOverride + '\n\n' + systemPrompt;
     }
 
+    // Specialised instructions per task type
+    if (isSpreadsheet) {
+      systemPrompt += `\n\nFor spreadsheet tasks: provide a COMPLETE, detailed specification including:
+- All tab names and their purpose
+- Every column header with data types
+- All formulas with exact syntax
+- Sample data rows
+- Design/formatting recommendations
+- Instructions for the buyer
+Make this thorough enough to build a real sellable product.`;
+    }
+
     systemPrompt += `\n\nAlways respond with clear, well-structured, actionable output.`;
 
-    // Build message content — include attachments as context
+    // Build message content with attachments
     const messageContent: any[] = [];
 
     if (attachments?.length) {
       messageContent.push({
         type: 'text',
-        text: `You have access to ${attachments.length} file(s) in this room:\n${
-          attachments.map((a: any) => `- ${a.name} (${a.type})`).join('\n')
-        }\n\nUse these as reference for your task.\n\n`,
+        text: `You have ${attachments.length} attached file(s):\n${attachments.map((a: any) => `- ${a.name} (${a.type})`).join('\n')}\n\n`,
       });
-      // Add images if present (vision support)
       for (const att of attachments) {
         if (att.type === 'image' && att.url?.startsWith('data:')) {
           const [header, data] = att.url.split(',');
           const mediaType = header.match(/data:([^;]+)/)?.[1] || 'image/jpeg';
-          messageContent.push({
-            type: 'image',
-            source: { type: 'base64', media_type: mediaType, data },
-          });
+          messageContent.push({ type:'image', source:{ type:'base64', media_type:mediaType, data } });
         }
       }
     }
 
     messageContent.push({ type: 'text', text: task });
 
-    const maxTokens = roomConfig?.maxTokens || 2000;
+    const maxTokens = roomConfig?.maxTokens || 3000;
 
     const msg = await client.messages.create({
       model: 'claude-opus-4-5',
@@ -73,27 +84,29 @@ export async function POST(req: NextRequest) {
       .map((b: any) => b.text)
       .join('\n');
 
-    // Build outputs
     const outputs: TaskOutput[] = [];
     const roleLower = (agent.role + ' ' + agent.name).toLowerCase();
-    const taskLower = task.toLowerCase();
-
-    // Determine output format
     const fmt = roomConfig?.outputFormat;
 
-    if (fmt === 'image' || (roleLower.includes('media') || roleLower.includes('design') || roleLower.includes('visual'))) {
-      if (taskLower.includes('image') || taskLower.includes('visual') || taskLower.includes('design') || taskLower.includes('create') || fmt === 'image') {
-        outputs.push({
-          type: 'image',
-          content: '',
-          label: 'Visual Output — connect DALL-E or Stability AI to generate',
-        });
-      }
-      outputs.push({ type: 'text', content: rawResponse, label: 'Creative Direction' });
-    } else if (fmt === 'listing' || roleLower.includes('factory') || roleLower.includes('product') || roleLower.includes('listing')) {
-      outputs.push({ type: 'listing', content: rawResponse, label: 'Product Output' });
-    } else if (fmt === 'json') {
-      outputs.push({ type: 'json', content: rawResponse, label: 'Structured Data' });
+    if (isSpreadsheet) {
+      // Return the spec as text — client can trigger xlsx generation
+      outputs.push({
+        type: 'text',
+        content: rawResponse,
+        label: '📊 Spreadsheet Specification',
+      });
+      // Signal that this can be built into a real file
+      outputs.push({
+        type: 'file',
+        content: JSON.stringify({ type: 'xlsx_spec', spec: rawResponse }),
+        label: '⬇️ Generate .xlsx File',
+      });
+    } else if (isDocument) {
+      outputs.push({ type: 'text', content: rawResponse, label: '📄 Document Output' });
+    } else if (fmt === 'image' || roleLower.includes('media') || roleLower.includes('design')) {
+      outputs.push({ type: 'text', content: rawResponse, label: '🎨 Creative Direction' });
+    } else if (fmt === 'listing' || roleLower.includes('factory') || roleLower.includes('product')) {
+      outputs.push({ type: 'listing', content: rawResponse, label: '🏭 Product Output' });
     } else {
       outputs.push({ type: 'text', content: rawResponse, label: `${agent.role} Output` });
     }
@@ -101,17 +114,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ outputs, rawResponse });
   } catch (e: any) {
     const msg = e?.message || 'Unknown error';
-    const isAuthError = msg.includes('401') || msg.includes('auth') || msg.includes('API key');
+    const isAuth = msg.includes('401') || msg.includes('auth') || msg.includes('API key');
     return NextResponse.json({
       outputs: [{
         type: 'text',
-        content: isAuthError
-          ? `❌ Invalid API key for ${agent.name}.\n\nCheck that your Anthropic API key is correct in the agent settings.`
+        content: isAuth
+          ? `❌ Invalid API key for ${agent.name}. Check agent settings in Guild Hall.`
           : `❌ Agent error: ${msg}`,
         label: 'Error',
       }],
       rawResponse: null,
       error: msg,
-    }, { status: 500 });
+    }, { status: 200 }); // 200 so client handles it gracefully
   }
 }
